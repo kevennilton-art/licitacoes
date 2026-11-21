@@ -1,0 +1,37 @@
+name: Coletar licitações
+
+on:
+  schedule:
+    # 00:20, 06:20, 12:20 e 18:20 no horário de Brasília (03:20, 09:20, 15:20 e 21:20 UTC)
+    - cron: "20 3,9,15,21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Coletar no PNCP
+        run: OUT=/tmp/saida python3 scripts/coletar.py
+
+      - name: Publicar os dados na branch "dados"
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan dados
+          git rm -rf . > /dev/null 2>&1 || true
+          cp /tmp/saida/licitacoes.json.gz /tmp/saida/meta.json .
+          git add licitacoes.json.gz meta.json
+          git commit -m "Dados coletados em $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --force origin dados
