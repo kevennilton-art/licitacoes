@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Coleta as licitações com propostas abertas no PNCP e grava dois arquivos:
+
+  licitacoes.json.gz  lista enxuta de licitações (usada pelo site)
+  meta.json           data da coleta, totais e estatísticas
+
+Se qualquer modalidade falhar, nada é gravado (o site continua com os dados anteriores).
+"""
+import gzip
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
+
+BASE = os.environ.get("PNCP_BASE", "https://pncp.gov.br/api/consulta/v1")
+SAIDA = os.environ.get("OUT", "saida")
+PAUSA = float(os.environ.get("PAUSA", "6.5"))  # ~9 chamadas por minuto (limite visto: ~12)
+ESPERA_ERRO = float(os.environ.get("ESPERA_ERRO", "30"))
+MAX_PAGINAS = int(os.environ.get("MAX_PAGINAS", "0"))  # 0 = todas (só para testes usar outro valor)
+MODALIDADES = range(1, 14)
+HEADERS = {"User-Agent": "Mozilla/5.0 (buscador de licitacoes)", "Accept": "application/json"}
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def chamar(path, params, tentativas=5):
+    url = f"{BASE}{path}?{urllib.parse.urlencode(params)}"
+    ultimo = "sem resposta"
+    for i in range(tentativas):
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=60) as r:
+                corpo = r.read()
+                if r.status == 204 or not corpo:
+                    return 204, None
+                return r.status, json.loads(corpo)
+        except urllib.error.HTTPError as e:
+            ultimo = f"HTTP {e.code}"
+            if e.code in (429, 500, 502, 503, 504) and i < tentativas - 1:
+                time.sleep(ESPERA_ERRO * (i + 1))
+                continue
+            return e.code, ultimo
+        except Exception as e:  # rede, JSON inválido
+            ultimo = repr(e)[:120]
+            if i < tentativas - 1:
+                time.sleep(min(10, ESPERA_ERRO))
+                continue
+    return 0, ultimo
+
+
+def texto(v, n=None):
+    if v is None:
+        return None
+    v = str(v).strip()
+    if not v:
+        return None
+    return v[:n] if n else v
+
+
+def enxuto(r):
+    org = r.get("orgaoEntidade") or {}
+    un = r.get("unidadeOrgao") or {}
+    am = r.get("amparoLegal") or {}
+    d = {
+        "id": r.get("numeroControlePNCP"),
+        "obj": texto(r.get("objetoCompra"), 1500),
+        "mi": r.get("modalidadeId"),
+        "mn": texto(r.get("modalidadeNome")),
+        "dp": texto(r.get("modoDisputaNome")),
+        "st": texto(r.get("situacaoCompraNome")),
+        "vl": r.get("valorTotalEstimado"),
+        "pub": texto(r.get("dataPublicacaoPncp")),
+        "ab": texto(r.get("dataAberturaProposta")),
+        "enc": texto(r.get("dataEncerramentoProposta")),
+        "org": texto(org.get("razaoSocial")),
+        "cnpj": texto(org.get("cnpj")),
+        "esf": texto(org.get("esferaId")),
+        "pod": texto(org.get("poderId")),
+        "und": texto(un.get("nomeUnidade")),
+        "uf": texto(un.get("ufSigla")),
+        "mun": texto(un.get("municipioNome")),
+        "num": texto(r.get("numeroCompra")),
+        "proc": texto(r.get("processo")),
+        "ano": r.get("anoCompra"),
+        "seq": r.get("sequencialCompra"),
+        "lnk": texto(r.get("linkSistemaOrigem") or r.get("linkProcessoEletronico"), 400),
+        "usr": texto(r.get("usuarioNome")),
+        "srp": True if r.get("srp") else None,
+        "amp": texto(am.get("nome")),
+    }
+    return {k: v for k, v in d.items() if v is not None}
+
+
+def main():
+    inicio = time.time()
+    data_final = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y%m%d")
+    itens = {}
+    por_modalidade = {}
+    erros = []
+
+    for m in MODALIDADES:
+        pagina, total_pag = 1, 1
+        while pagina <= total_pag:
+            if MAX_PAGINAS and pagina > MAX_PAGINAS:
+                break
+            st, corpo = chamar(
+                "/contratacoes/proposta",
+                {"dataFinal": data_final, "codigoModalidadeContratacao": m, "pagina": pagina, "tamanhoPagina": 50},
+            )
+            time.sleep(PAUSA)
+            if st == 204:
+                break
+            if st != 200 or not isinstance(corpo, dict):
+                erros.append(f"modalidade {m} pagina {pagina}: {st} {str(corpo)[:100]}")
+                break
+            total_pag = int(corpo.get("totalPaginas") or 1)
+            for r in corpo.get("data") or []:
+                e = enxuto(r)
+                if e.get("id"):
+                    itens[e["id"]] = e
+                    por_modalidade[e.get("mn") or str(m)] = por_modalidade.get(e.get("mn") or str(m), 0) + 1
+            if pagina % 25 == 0 or pagina == total_pag:
+                log(f"modalidade {m}: pagina {pagina}/{total_pag} | total acumulado {len(itens)} | {int(time.time() - inicio)}s")
+            pagina += 1
+
+    if erros:
+        log("ERROS NA COLETA (nada foi gravado):")
+        for e in erros:
+            log("  " + e)
+        return 1
+    if not itens:
+        log("Nenhuma licitação coletada. Nada foi gravado.")
+        return 1
+
+    lista = sorted(itens.values(), key=lambda x: x.get("enc") or "")
+    os.makedirs(SAIDA, exist_ok=True)
+    bruto = json.dumps(lista, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    with open(os.path.join(SAIDA, "licitacoes.json.gz"), "wb") as f:
+        f.write(gzip.compress(bruto, 9, mtime=0))
+
+    dominios = Counter()
+    for x in lista:
+        link = x.get("lnk")
+        if link:
+            try:
+                dominios[urlparse(link).netloc.lower() or "(vazio)"] += 1
+            except Exception:
+                dominios["(invalido)"] += 1
+    usuarios = Counter(x.get("usr") or "(sem usuario)" for x in lista)
+    agora = datetime.now(timezone.utc)
+    meta = {
+        "geradoEm": agora.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "geradoEmBrasilia": (agora - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M"),
+        "total": len(lista),
+        "tamanhoJsonBytes": len(bruto),
+        "duracaoSegundos": int(time.time() - inicio),
+        "porModalidade": por_modalidade,
+        "semLink": sum(1 for x in lista if not x.get("lnk")),
+        "topUsuarios": usuarios.most_common(80),
+        "topDominios": dominios.most_common(80),
+    }
+    with open(os.path.join(SAIDA, "meta.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=1)
+    log(f"OK: {len(lista)} licitações | JSON {len(bruto) / 1e6:.1f} MB | {meta['duracaoSegundos']}s")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
