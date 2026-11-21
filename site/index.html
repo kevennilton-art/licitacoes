@@ -23,6 +23,7 @@
   }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{font-size:15px}
 body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 var(--font);
   padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
@@ -125,7 +126,9 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       <fieldset><legend>Poder</legend><div id="f-pod"></div></fieldset>
       <fieldset><legend>Modalidade</legend><div id="f-mod" class="facet"></div></fieldset>
       <fieldset><legend>Modo de disputa</legend><div id="f-dp"></div></fieldset>
-      <fieldset><legend>Portal de origem</legend><div id="f-pt" class="facet"></div>
+      <fieldset><legend>Portal ou sistema de origem</legend>
+        <input type="search" id="pt-busca" placeholder="Buscar portal ou sistema" aria-label="Buscar portal ou sistema" style="margin-bottom:6px">
+        <div id="f-pt" class="facet" style="max-height:260px"></div>
         <p class="small" style="margin:6px 0 0" id="ptnota"></p></fieldset>
 
       <fieldset>
@@ -207,11 +210,27 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
     [/ammlicita/,'AMM Licita'],[/portal\.tce\.rs\.gov\.br/,'Portal TCE-RS'],[/pncp\.gov\.br/,'PNCP']
   ];
   var SEM='Não informado';
-  function portalDe(l){
+  function portalDoLink(l){
     if(!l)return SEM;var h;
     try{h=new URL(l).hostname.toLowerCase()}catch(e){return SEM}
     for(var i=0;i<PORTAIS.length;i++)if(PORTAIS[i][0].test(h))return PORTAIS[i][1];
     return h.replace(/^www\d?\./,'')||SEM;
+  }
+  /* O PNCP informa o sistema que publicou a licitação (campo "usr"). É mais completo que o link. */
+  var NOMES=[
+    [/^compras\.gov\.br$/,'Compras.gov.br (Comprasnet)'],
+    [/^ecustomize/,'Portal de Compras Públicas'],
+    [/^licitar digital/,'Licitar Digital'],
+    [/^licitanet/,'Licitanet'],
+    [/^bolsa nacional de compras/,'BNC - Bolsa Nacional de Compras'],
+    [/^licitacoes-e bb/,'Licitações-e (Banco do Brasil)'],
+    [/^licita \+ brasil|^licita\+ brasil/,'Licita+ Brasil'],
+    [/^novo bbmnet/,'BBMNET Licitações']
+  ];
+  function portalDe(r){
+    var u=(r.usr||'').replace(/\s+/g,' ').trim();
+    if(u){var k=norm(u);for(var i=0;i<NOMES.length;i++)if(NOMES[i][0].test(k))return NOMES[i][1];return u}
+    return portalDoLink(r.lnk);
   }
 
   var DATA=[],RES=[],SHOW=50,TERMS=[];
@@ -246,7 +265,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       r._o=norm((r.org||'')+' '+(r.und||''));
       r._m=norm(r.mun);
       r._n=norm([r.id,r.proc,r.num,(r.num&&r.ano?r.num+'/'+r.ano:'')].join(' '));
-      r._pt=portalDe(r.lnk);
+      r._pt=portalDe(r);
       r._dp=r.dp||'Não informado';
       add(fac.esf,r.esf||'?',ESF[r.esf]||'Não informada');
       add(fac.pod,r.pod||'?',POD[r.pod]||'Não informado');
@@ -334,12 +353,4 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
   function card(r){
     var dd=dias(r.enc),prazo='';
     if(dd!==null){prazo=dd<0?'<span class="tag gray">encerrada</span>':dd<=3?'<span class="tag warn">'+(dd<=0?'encerra hoje':'faltam '+dd+(dd===1?' dia':' dias'))+'</span>':'<span class="tag gray">faltam '+dd+' dias</span>'}
-    var lnk=seguro(r.lnk),pn=(r.cnpj&&r.ano&&r.seq)?'https://pncp.gov.br/app/editais/'+encodeURIComponent(r.cnpj)+'/'+encodeURIComponent(r.ano)+'/'+encodeURIComponent(r.seq):null;
-    var loc=[r.mun,r.uf].filter(Boolean).join(' / ');
-    var h='<article class="card"><div class="top"><span class="tag">'+esc(r.mn||'Modalidade')+'</span>';
-    if(r.dp)h+='<span class="tag gray">'+esc(r.dp)+'</span>';
-    if(r.srp)h+='<span class="tag gray">SRP</span>';
-    h+='<span class="tag gray">'+esc(r._pt)+'</span><span class="spacer"></span>'+prazo+'</div>';
-    h+='<div><div class="org">'+esc(r.org||'Órgão não informado')+'</div><div class="loc">'+esc(loc)+(r.und&&r.und!==r.org?' · '+esc(r.und):'')+'</div></div>';
-    h+='<div class="obj">'+destacar(r.obj)+'</div>';
-    h+='<div class="meta"><span>Valor estimado: <b>'+brl(r.vl)+'</b></span><span>Abertura: <b>'+data(r.ab)+'</b></span><span>Encerramento: <b>'+data(r.enc)+'</b></span><span>Publicação: <b>'+data(r.pub)+'</b></span>'+(r.proc?'<span>Processo: <b>'+esc(r.proc)+'</b></span>':'')+(r.num&&r.ano?'<span>Nº: <b>'+esc(r.num)+'/'+esc(r.ano)+'</b></
+    var lnk=seguro(r.lnk),pn=(r.cnpj&&r.ano&&r.seq)?'https://pncp.gov.br/app/editais/'+encodeURIComponent(r.cnpj)+'/'+encodeURIC
