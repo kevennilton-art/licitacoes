@@ -1,0 +1,26 @@
+name: Testar API do PNCP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Rodar o teste
+        run: python3 scripts/testar_api.py
+
+      - name: Guardar o resultado
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-teste-api
+          path: resultado.txt
+          if-no-files-found: ignore
