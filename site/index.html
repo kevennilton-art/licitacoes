@@ -101,7 +101,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
 <body>
 <header class="top">
   <h1>Buscador de Licitações</h1>
-  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP · v3</div>
+  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP · v4</div>
 </header>
 
 <div class="app">
@@ -286,31 +286,64 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
     montarFacetas();
   }
 
-  /* ---------- carregar dados ---------- */
-  async function carregar(){
+  /* ---------- carregar dados (sem async/await, para navegadores antigos) ---------- */
+  function baixar(r){
+    if(!(r.body&&r.body.getReader))return r.arrayBuffer();
+    var rd=r.body.getReader(),parts=[],got=0;
+    return new Promise(function(res,rej){
+      (function passo(){
+        rd.read().then(function(x){
+          if(x.done){
+            var all=new Uint8Array(got),o=0;
+            parts.forEach(function(p){all.set(p,o);o+=p.length});
+            return res(all);
+          }
+          parts.push(x.value);got+=x.value.length;
+          fase('Baixando os dados\u2026 '+(got/1048576).toFixed(1)+' MB');
+          passo();
+        }).catch(rej);
+      })();
+    });
+  }
+  function carregarPako(){
+    return new Promise(function(res,rej){
+      if(window.pako)return res();
+      var sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
+      sc.onload=function(){res()};sc.onerror=function(){rej(new Error('não foi possível carregar o descompactador'))};
+      document.head.appendChild(sc);
+    });
+  }
+  function descompactar(buf){
+    if(typeof DecompressionStream!=='undefined'&&typeof Response!=='undefined'){
+      try{return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()}catch(e){}
+    }
+    return carregarPako().then(function(){return window.pako.ungzip(new Uint8Array(buf),{to:'string'})});
+  }
+  function carregar(){
     PRONTO=false;
-    var p=new URLSearchParams(location.search);
-    var base=p.get('base')||window.DADOS_URL||'';
-    if(!base||/SEU_USUARIO/.test(base))return erro('Falta configurar o endereço dos dados no arquivo config.js.');
+    var mm=/[?&]base=([^&]+)/.exec(location.search);
+    var base=mm?decodeURIComponent(mm[1]):(window.DADOS_URL||'');
+    if(!base||/SEU_USUARIO/.test(base)){erro('Falta configurar o endereço dos dados no arquivo config.js.');return}
     if(base.slice(-1)!=='/')base+='/';
-    if(typeof DecompressionStream==='undefined')return erro('Este navegador é antigo demais. Use o Chrome ou o Edge atualizados.');
-    try{
-      fase('Baixando os dados…');
-      var r=await fetch(base+'licitacoes.json.gz',{cache:'no-cache'});
+    if(typeof fetch==='undefined'||typeof Promise==='undefined'){erro('Este navegador é antigo demais. Use o Chrome atualizado.');return}
+    fase('Baixando os dados\u2026');
+    fetch(base+'licitacoes.json.gz',{cache:'no-cache'}).then(function(r){
       if(!r.ok)throw new Error('o servidor respondeu '+r.status);
-      var parts=[],got=0,rd=r.body.getReader();
-      for(;;){var x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;fase('Baixando os dados… '+(got/1048576).toFixed(1)+' MB')}
-      fase('Descompactando…');await pausa();
-      var txt=await new Response(new Blob(parts).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-      parts=null;
-      fase('Lendo os dados…');await pausa();
-      DATA=JSON.parse(txt);txt=null;
-    }catch(e){return erro('Não foi possível carregar os dados: '+esc(e&&e.message||e))}
-    try{await preparar()}catch(e){return erro('Erro ao organizar os dados: '+esc(e&&e.message||e))}
-    try{
-      var mr=await fetch(base+'meta.json',{cache:'no-cache'});
-      if(mr.ok){var m=await mr.json();$('#fonte').textContent='Fonte: PNCP · atualizado em '+m.geradoEmBrasilia+' · '+fmtn(m.total)+' licitações com propostas abertas · v3'}
-    }catch(e){}
+      return baixar(r);
+    }).then(function(buf){
+      fase('Descompactando\u2026');
+      return pausa().then(function(){return descompactar(buf)});
+    }).then(function(txt){
+      fase('Lendo os dados\u2026');
+      return pausa().then(function(){DATA=JSON.parse(txt)});
+    }).then(function(){
+      return preparar();
+    }).then(function(){
+      return fetch(base+'meta.json',{cache:'no-cache'}).then(function(mr){return mr.ok?mr.json():null}).then(function(m){
+        if(m)$('#fonte').textContent='Fonte: PNCP \u00b7 atualizado em '+m.geradoEmBrasilia+' \u00b7 '+fmtn(m.total)+' licitações com propostas abertas \u00b7 v4';
+      }).catch(function(){});
+    }).catch(function(e){erro('Não foi possível carregar: '+esc(e&&e.message||e))});
   }
 
   function preparar(){
@@ -318,35 +351,3 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       var fac={esf:Object.create(null),pod:Object.create(null),mod:Object.create(null),dp:Object.create(null),pt:Object.create(null)};
       var add=function(o,k,l){if(!k)return;var x=o[k]||(o[k]={l:l,n:0});x.n++};
       var i=0,N=DATA.length;
-      function lote(){
-        try{
-          var fim=Math.min(i+3000,N);
-          for(;i<fim;i++){
-            var r=DATA[i];
-            r._h=norm([r.obj,r.org,r.und,r.mun].join(' '));
-            r._o=norm((r.org||'')+' '+(r.und||''));
-            r._m=norm(r.mun);
-            r._n=norm([r.id,r.proc,r.num,(r.num&&r.ano?r.num+'/'+r.ano:'')].join(' '));
-            r._pt=portalDe(r);
-            r._dp=r.dp||'Não informado';
-            add(fac.esf,r.esf||'?',r.esf);
-            add(fac.pod,r.pod||'?',r.pod);
-            add(fac.mod,String(r.mi||'?'),r.mn||'Outra');
-            add(fac.dp,r._dp,r._dp);
-            add(fac.pt,r._pt,r._pt);
-          }
-          if(i<N){fase('Organizando… '+Math.round(100*i/N)+'%');setTimeout(lote,0)}
-          else{FAC=fac;montarFacetas();PRONTO=true;$('#status').hidden=true;aplicar();res()}
-        }catch(e){rej(e)}
-      }
-      lote();
-    });
-  }
-
-  /* ---------- filtro ---------- */
-  function termos(s){
-    return String(s||'').split(';').map(function(t){return norm(t).trim().split(/\s+/).filter(Boolean)}).filter(function(w){return w.length});
-  }
-  function aplicar(){
-    if(!PRONTO)return;
-    var inc=termos(F.q),exc=termos(F.ex),num=norm(F.num).trim(),mun=norm(F.mun).trim(),org=norm
