@@ -78,6 +78,7 @@ main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .tag.gray{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .spacer{flex:1}
+.upd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .org{font-weight:700;overflow-wrap:anywhere}
 .loc{color:var(--muted);font-size:.88rem}
 .obj{overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
@@ -101,7 +102,15 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
 <body>
 <header class="top">
   <h1>Buscador de Licitações</h1>
-  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP · v4</div>
+  <div class="upd">
+    <button class="btn" id="upd-btn" type="button">Atualizar agora</button>
+    <span class="small" id="upd-msg"></span>
+  </div>
+  <div class="upd" id="upd-box" hidden>
+    <input type="password" id="upd-pin" inputmode="numeric" placeholder="PIN" aria-label="PIN" autocomplete="off" style="width:110px">
+    <button class="btn" id="upd-go" type="button">Confirmar</button>
+  </div>
+  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP · v5</div>
 </header>
 
 <div class="app">
@@ -532,6 +541,33 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       aplicar();
     }
   });
+
+  /* ---------- botão "Atualizar agora" (dispara a coleta pelo Netlify) ---------- */
+  var FN='/.netlify/functions/atualizar';
+  function hora(s){var d=new Date(s);return isNaN(d)?'':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+  function updMsg(t){$('#upd-msg').textContent=t}
+  function updEstado(){
+    fetch(FN,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+      if(d&&d.estado==='rodando')updMsg('Coleta em andamento desde '+hora(d.inicio)+' (leva cerca de 1h40).');
+      else if(d&&d.estado==='parada'&&d.resultado&&d.resultado!=='success')updMsg('A última coleta falhou ('+hora(d.fim)+').');
+    }).catch(function(){});
+  }
+  $('#upd-btn').addEventListener('click',function(){
+    var b=$('#upd-box');b.hidden=!b.hidden;
+    try{var p=localStorage.getItem('upd-pin');if(p)$('#upd-pin').value=p}catch(e){}
+    if(!b.hidden)$('#upd-pin').focus();
+  });
+  $('#upd-go').addEventListener('click',function(){
+    var pin=$('#upd-pin').value;if(!pin){updMsg('Digite o PIN.');return}
+    updMsg('Enviando…');
+    fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:pin})})
+      .then(function(r){return r.json().catch(function(){return {msg:'Resposta inesperada ('+r.status+').'}})})
+      .then(function(d){
+        updMsg(d.msg||'Pronto.');
+        if(d.ok){try{localStorage.setItem('upd-pin',pin)}catch(e){}$('#upd-box').hidden=true}
+      }).catch(function(){updMsg('Não foi possível enviar o pedido.')});
+  });
+  updEstado();
 
   montarFixos();
   carregar();
