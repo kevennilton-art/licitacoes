@@ -4,9 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Buscador de Licitações</title>
+<script>
+/* Mostra qualquer erro de script na tela, para facilitar o diagnóstico. */
+window.addEventListener('error',function(e){
+  var m=(e.message||'erro')+(e.lineno?' (linha '+e.lineno+')':'');
+  var s=document.getElementById('status');
+  if(s){s.hidden=false;s.className='status err';s.textContent='Erro no site: '+m}
+});
+</script>
 <script src="config.js"></script>
 <style>
-/* Layout: filtros fixos à esquerda, busca e resultados à direita. No celular os filtros viram um bloco recolhível. */
+/* Layout: filtros à esquerda, busca e resultados à direita. No celular os filtros ficam recolhidos num bloco. */
 :root{
   --bg:#F4F6F9; --surface:#FFFFFF; --ink:#16202B; --muted:#586573; --line:#DAE0E7;
   --accent:#1F5FBF; --accent-ink:#FFFFFF; --accent-soft:#E5EDFA;
@@ -28,33 +36,31 @@ html{font-size:15px}
 body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 var(--font);
   padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
 h1{font-size:1.35rem;margin:0}
-h2{font-size:.95rem;margin:0}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 header.top{max-width:1500px;margin:0 auto;padding:14px 0 6px;display:flex;flex-wrap:wrap;gap:6px 20px;align-items:baseline;justify-content:space-between}
 header .sub{color:var(--muted);font-size:.9rem}
 .app{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:310px minmax(0,1fr);gap:18px;align-items:start;padding-bottom:40px}
 aside{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
-aside>summary{font-weight:700;cursor:pointer;padding:2px 0 8px}
+aside summary{font-weight:700;cursor:pointer;padding:6px 0 8px;font-size:1.05rem}
 fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:10px 0}
-legend{font-weight:700;font-size:.85rem;padding:0 0 6px;float:left;width:100%}
+legend{font-weight:700;font-size:.9rem;padding:0 0 6px;float:left;width:100%}
 fieldset>*{clear:both}
 .row{display:flex;gap:6px;flex-wrap:wrap}
 .small{font-size:.82rem;color:var(--muted)}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;cursor:pointer;min-height:34px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:38px}
 .btn:hover{border-color:var(--accent)}
 .btn.link{border:0;background:none;color:var(--accent);padding:2px 4px;min-height:0;text-decoration:underline}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-input[type=text],input[type=search],input[type=number],input[type=date],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:36px}
-.ufs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-.ufs button{padding:5px 0;border:1px solid var(--line);background:var(--bg);border-radius:6px;cursor:pointer;font-size:.8rem}
+input[type=text],input[type=search],input[type=number],input[type=date],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:38px}
+.ufs{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.ufs button{padding:9px 0;border:1px solid var(--line);background:var(--bg);border-radius:6px;cursor:pointer;font-size:.85rem}
 .ufs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
-.chk{display:flex;align-items:flex-start;gap:7px;padding:2px 0;font-size:.88rem}
-.chk input{margin-top:3px;flex:none}
+.chk{display:flex;align-items:flex-start;gap:7px;padding:5px 0;font-size:.92rem}
+.chk input{margin-top:4px;flex:none;width:18px;height:18px}
 .chk span.n{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;padding-left:6px}
-.chk label{display:flex;gap:7px;flex:1;min-width:0;cursor:pointer}
+.chk label{display:flex;gap:8px;flex:1;min-width:0;cursor:pointer}
 .chk label span.t{overflow-wrap:anywhere}
-.facet{max-height:210px;overflow:auto}
+.facet{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:2px 8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .searchbar{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
@@ -63,7 +69,7 @@ main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .bar2{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:2px 4px 2px 10px;font-size:.8rem;font-weight:600}
-.chip button{border:0;background:none;cursor:pointer;color:inherit;padding:0 5px;font-size:1rem;line-height:1}
+.chip button{border:0;background:none;cursor:pointer;color:inherit;padding:0 6px;font-size:1.1rem;line-height:1}
 .count{font-weight:700}
 .cards{display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -71,20 +77,19 @@ main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .tag{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
 .tag.gray{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
-.tag.ok{background:var(--ok-soft);color:var(--ok)}
 .spacer{flex:1}
 .org{font-weight:700;overflow-wrap:anywhere}
 .loc{color:var(--muted);font-size:.88rem}
 .obj{overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-.obj.open{display:block}
 mark{background:var(--mark);color:inherit;border-radius:2px}
 .meta{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:.85rem;color:var(--muted)}
 .meta b{color:var(--ink);font-weight:600}
 .links{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.links a{text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-weight:600;font-size:.88rem;color:var(--accent)}
+.links a{text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:600;font-size:.88rem;color:var(--accent)}
 .links a.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.status{padding:30px 10px;text-align:center;color:var(--muted)}
+.status{padding:26px 10px;text-align:center;color:var(--muted)}
 .status.err{color:var(--danger)}
+.status .btn{margin-top:10px}
 .more{align-self:center;margin:6px 0}
 @media (max-width:980px){
   .app{grid-template-columns:1fr}
@@ -96,7 +101,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
 <body>
 <header class="top">
   <h1>Buscador de Licitações</h1>
-  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP</div>
+  <div class="sub" id="fonte">Licitações com propostas abertas no Brasil · fonte: PNCP · v3</div>
 </header>
 
 <div class="app">
@@ -115,21 +120,25 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       </fieldset>
 
       <fieldset>
+        <legend>Portal ou sistema de origem</legend>
+        <p class="small" style="margin:0 0 6px">Marque os que você quer. Os principais estão no topo.</p>
+        <input type="search" id="pt-busca" placeholder="Buscar outro portal ou sistema" aria-label="Buscar portal ou sistema" style="margin-bottom:6px">
+        <div id="f-pt" class="facet" style="max-height:300px"></div>
+        <p class="small" style="margin:6px 0 0" id="ptnota"></p>
+      </fieldset>
+
+      <fieldset><legend>Modalidade</legend><div id="f-mod"></div></fieldset>
+      <fieldset><legend>Esfera</legend><div id="f-esf"></div></fieldset>
+      <fieldset><legend>Poder</legend><div id="f-pod"></div></fieldset>
+      <fieldset><legend>Modo de disputa</legend><div id="f-dp"></div></fieldset>
+
+      <fieldset>
         <legend>Município e órgão</legend>
         <div class="two">
           <input type="search" data-f="mun" placeholder="Município" aria-label="Município">
           <input type="search" data-f="org" placeholder="Nome do órgão" aria-label="Nome do órgão">
         </div>
       </fieldset>
-
-      <fieldset><legend>Esfera</legend><div id="f-esf"></div></fieldset>
-      <fieldset><legend>Poder</legend><div id="f-pod"></div></fieldset>
-      <fieldset><legend>Modalidade</legend><div id="f-mod" class="facet"></div></fieldset>
-      <fieldset><legend>Modo de disputa</legend><div id="f-dp"></div></fieldset>
-      <fieldset><legend>Portal ou sistema de origem</legend>
-        <input type="search" id="pt-busca" placeholder="Buscar portal ou sistema" aria-label="Buscar portal ou sistema" style="margin-bottom:6px">
-        <div id="f-pt" class="facet" style="max-height:260px"></div>
-        <p class="small" style="margin:6px 0 0" id="ptnota"></p></fieldset>
 
       <fieldset>
         <legend>Valor estimado (R$)</legend>
@@ -184,7 +193,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
         </select></label>
     </div>
     <div class="chips" id="chips"></div>
-    <div id="status" class="status">Carregando licitações…</div>
+    <div id="status" class="status">Iniciando…</div>
     <div class="cards" id="cards"></div>
     <button class="btn more" id="mais" hidden>Mostrar mais</button>
   </main>
@@ -195,28 +204,25 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
   var $=function(s){return document.querySelector(s)};
   var norm=function(s){return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var fmtn=function(n){return Number(n).toLocaleString('pt-BR')};
+
+  /* No celular, os filtros começam recolhidos. */
+  if(window.matchMedia('(max-width:980px)').matches)$('#painel').open=false;
 
   var UFS=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
   var REG={N:['AC','AP','AM','PA','RO','RR','TO'],NE:['AL','BA','CE','MA','PB','PE','PI','RN','SE'],CO:['DF','GO','MT','MS'],SE:['ES','MG','RJ','SP'],S:['PR','RS','SC']};
   var REGN={N:'Norte',NE:'Nordeste',CO:'Centro-Oeste',SE:'Sudeste',S:'Sul'};
-  var ESF={F:'Federal',E:'Estadual',M:'Municipal',D:'Distrital'};
-  var POD={E:'Executivo',L:'Legislativo',J:'Judiciário',N:'Não se aplica'};
-  var PORTAIS=[
-    [/cnetmobile\.estaleiro\.serpro\.gov\.br|comprasnet|compras\.gov\.br/,'Compras.gov.br (Comprasnet)'],
-    [/bllcompras/,'BLL Compras'],[/portaldecompraspublicas/,'Portal de Compras Públicas'],[/licitanet/,'Licitanet'],
-    [/licitardigital/,'Licitar Digital'],[/licitamaisbrasil/,'Licita+ Brasil'],[/bnccompras/,'BNC Compras'],
-    [/pregaobanrisul/,'Banrisul (Pregão)'],[/licitacoes-e/,'Licitações-e (Banco do Brasil)'],
-    [/compras\.mg\.gov\.br/,'Compras MG'],[/compras\.rj\.gov\.br/,'Compras RJ'],[/compras\.rs\.gov\.br/,'Compras RS'],
-    [/ammlicita/,'AMM Licita'],[/portal\.tce\.rs\.gov\.br/,'Portal TCE-RS'],[/pncp\.gov\.br/,'PNCP']
-  ];
+  var ESF_L=[['F','Federal'],['E','Estadual'],['M','Municipal'],['D','Distrital']];
+  var POD_L=[['E','Executivo'],['L','Legislativo'],['J','Judiciário'],['N','Não se aplica']];
+  var MOD_L=[['6','Pregão - Eletrônico'],['8','Dispensa'],['12','Credenciamento'],['4','Concorrência - Eletrônica'],['7','Pregão - Presencial'],['5','Concorrência - Presencial'],['1','Leilão - Eletrônico'],['13','Leilão - Presencial'],['11','Pré-qualificação'],['9','Inexigibilidade'],['3','Concurso'],['10','Manifestação de Interesse'],['2','Diálogo Competitivo']];
+  var PT_MAIN=['Compras.gov.br (Comprasnet)','Portal de Compras Públicas','BLL Compras','Licitanet','BNC - Bolsa Nacional de Compras','Licitar Digital','BBMNET Licitações','Licitações-e (Banco do Brasil)','Licita+ Brasil'];
   var SEM='Não informado';
-  function portalDoLink(l){
-    if(!l)return SEM;var h;
-    try{h=new URL(l).hostname.toLowerCase()}catch(e){return SEM}
-    for(var i=0;i<PORTAIS.length;i++)if(PORTAIS[i][0].test(h))return PORTAIS[i][1];
-    return h.replace(/^www\d?\./,'')||SEM;
-  }
-  /* O PNCP informa o sistema que publicou a licitação (campo "usr"). É mais completo que o link. */
+  var PORTAIS=[
+    [/cnetmobile\.estaleiro\.serpro\.gov\.br|comprasnet|compras\.gov\.br|comprasgovernamentais/,'Compras.gov.br (Comprasnet)'],
+    [/bllcompras|bll\.org\.br/,'BLL Compras'],[/portaldecompraspublicas/,'Portal de Compras Públicas'],[/licitanet/,'Licitanet'],
+    [/licitardigital/,'Licitar Digital'],[/licitamaisbrasil/,'Licita+ Brasil'],[/bnccompras|bnc\.org\.br/,'BNC - Bolsa Nacional de Compras'],
+    [/licitacoes-e/,'Licitações-e (Banco do Brasil)']
+  ];
   var NOMES=[
     [/^compras\.gov\.br$/,'Compras.gov.br (Comprasnet)'],
     [/^ecustomize/,'Portal de Compras Públicas'],
@@ -227,67 +233,114 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
     [/^licita \+ brasil|^licita\+ brasil/,'Licita+ Brasil'],
     [/^novo bbmnet/,'BBMNET Licitações']
   ];
+  function portalDoLink(l){
+    if(!l)return SEM;var h;
+    try{h=new URL(l).hostname.toLowerCase()}catch(e){return SEM}
+    for(var i=0;i<PORTAIS.length;i++)if(PORTAIS[i][0].test(h))return PORTAIS[i][1];
+    return h.replace(/^www\d?\./,'')||SEM;
+  }
+  /* O PNCP informa o sistema que publicou a licitação (campo "usr"); é mais completo que o link. */
   function portalDe(r){
     var u=(r.usr||'').replace(/\s+/g,' ').trim();
     if(u){var k=norm(u);for(var i=0;i<NOMES.length;i++)if(NOMES[i][0].test(k))return NOMES[i][1];return u}
     return portalDoLink(r.lnk);
   }
 
-  var DATA=[],RES=[],SHOW=50,TERMS=[];
+  var DATA=[],RES=[],SHOW=50,TERMS=[],FAC=null,PRONTO=false;
   var F={q:'',ex:'',num:'',mun:'',org:'',uf:new Set(),esf:new Set(),pod:new Set(),mod:new Set(),dp:new Set(),pt:new Set(),
     vmin:'',vmax:'',vsem:true,pf:'enc',d1:'',d2:'',srp:'',ord:'enc'};
 
+  /* ---------- mensagens de andamento ---------- */
+  function fase(m){var s=$('#status');s.hidden=false;s.className='status';s.textContent=m}
+  function erro(m){var s=$('#status');s.hidden=false;s.className='status err';s.innerHTML=m+'<br><button class="btn" id="retry">Tentar de novo</button>'}
+  var pausa=function(ms){return new Promise(function(r){setTimeout(r,ms||20)})};
+
+  /* ---------- controles que aparecem logo, antes dos dados ---------- */
+  function linha(key,v,label,n){
+    return '<div class="chk"><label><input type="checkbox" data-k="'+key+'" data-v="'+esc(v)+'"'+(F[key].has(v)?' checked':'')+'><span class="t">'+esc(label)+'</span></label><span class="n">'+(n==null?'':fmtn(n))+'</span></div>';
+  }
+  function contagem(map,k){return FAC?(map[k]?map[k].n:0):null}
+  function montarFacetas(){
+    var f=FAC||{esf:{},pod:{},mod:{},dp:{},pt:{}};
+    $('#f-esf').innerHTML=ESF_L.map(function(x){return linha('esf',x[0],x[1],contagem(f.esf,x[0]))}).join('');
+    $('#f-pod').innerHTML=POD_L.map(function(x){return linha('pod',x[0],x[1],contagem(f.pod,x[0]))}).join('');
+    var h=MOD_L.map(function(x){return linha('mod',x[0],x[1],contagem(f.mod,x[0]))}).join('');
+    if(FAC)Object.keys(f.mod).forEach(function(k){if(!MOD_L.some(function(x){return x[0]===k}))h+=linha('mod',k,f.mod[k].l,f.mod[k].n)});
+    $('#f-mod').innerHTML=h;
+    if(FAC){
+      $('#f-dp').innerHTML=Object.keys(f.dp).sort(function(a,b){return f.dp[b].n-f.dp[a].n}).map(function(k){return linha('dp',k,k,f.dp[k].n)}).join('');
+    }else $('#f-dp').innerHTML='<p class="small" style="margin:0">As opções aparecem quando os dados terminarem de carregar.</p>';
+    var p=PT_MAIN.map(function(k){return linha('pt',k,k,contagem(f.pt,k))}).join('');
+    if(FAC)Object.keys(f.pt).filter(function(k){return PT_MAIN.indexOf(k)<0}).sort(function(a,b){return f.pt[b].n-f.pt[a].n}).forEach(function(k){p+=linha('pt',k,k,f.pt[k].n)});
+    $('#f-pt').innerHTML=p;
+    filtrarPortais();
+    if(FAC){var sem=f.pt[SEM]?f.pt[SEM].n:0;$('#ptnota').textContent=sem?Math.round(100*sem/DATA.length)+'% das licitações não informam o portal de origem.':''}
+  }
+  function filtrarPortais(){
+    var q=norm($('#pt-busca').value).trim();
+    document.querySelectorAll('#f-pt .chk').forEach(function(row){row.hidden=!!q&&norm(row.textContent).indexOf(q)<0});
+  }
+  function montarFixos(){
+    $('#ufs').innerHTML=UFS.map(function(u){return '<button data-uf="'+u+'" aria-pressed="false">'+u+'</button>'}).join('');
+    $('#regioes').innerHTML=Object.keys(REG).map(function(k){return '<button class="btn" data-reg="'+k+'">'+REGN[k]+'</button>'}).join('');
+    montarFacetas();
+  }
+
   /* ---------- carregar dados ---------- */
   async function carregar(){
+    PRONTO=false;
     var p=new URLSearchParams(location.search);
     var base=p.get('base')||window.DADOS_URL||'';
     if(!base||/SEU_USUARIO/.test(base))return erro('Falta configurar o endereço dos dados no arquivo config.js.');
     if(base.slice(-1)!=='/')base+='/';
     if(typeof DecompressionStream==='undefined')return erro('Este navegador é antigo demais. Use o Chrome ou o Edge atualizados.');
     try{
-      var rs=await Promise.all([fetch(base+'licitacoes.json.gz',{cache:'no-cache'}),fetch(base+'meta.json',{cache:'no-cache'}).catch(function(){return null})]);
-      var r=rs[0];
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      var txt=await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
-      DATA=JSON.parse(txt);
-      if(rs[1]&&rs[1].ok){try{var m=await rs[1].json();
-        $('#fonte').textContent='Fonte: PNCP · atualizado em '+m.geradoEmBrasilia+' · '+m.total.toLocaleString('pt-BR')+' licitações com propostas abertas'}catch(e){}}
-    }catch(e){return erro('Não foi possível carregar os dados ('+esc(e.message||e)+'). Se for a primeira vez, confira se a coleta já rodou e se o endereço em config.js está certo.')}
-    preparar();
+      fase('Baixando os dados…');
+      var r=await fetch(base+'licitacoes.json.gz',{cache:'no-cache'});
+      if(!r.ok)throw new Error('o servidor respondeu '+r.status);
+      var parts=[],got=0,rd=r.body.getReader();
+      for(;;){var x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;fase('Baixando os dados… '+(got/1048576).toFixed(1)+' MB')}
+      fase('Descompactando…');await pausa();
+      var txt=await new Response(new Blob(parts).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      parts=null;
+      fase('Lendo os dados…');await pausa();
+      DATA=JSON.parse(txt);txt=null;
+    }catch(e){return erro('Não foi possível carregar os dados: '+esc(e&&e.message||e))}
+    try{await preparar()}catch(e){return erro('Erro ao organizar os dados: '+esc(e&&e.message||e))}
+    try{
+      var mr=await fetch(base+'meta.json',{cache:'no-cache'});
+      if(mr.ok){var m=await mr.json();$('#fonte').textContent='Fonte: PNCP · atualizado em '+m.geradoEmBrasilia+' · '+fmtn(m.total)+' licitações com propostas abertas · v3'}
+    }catch(e){}
   }
-  function erro(m){var s=$('#status');s.className='status err';s.innerHTML=m}
 
   function preparar(){
-    var fac={esf:{},pod:{},mod:{},dp:{},pt:{}};
-    var add=function(o,k,l){if(!k)return;var x=o[k]||(o[k]={l:l,n:0});x.n++};
-    DATA.forEach(function(r){
-      r._h=norm([r.obj,r.org,r.und,r.mun].join(' '));
-      r._o=norm((r.org||'')+' '+(r.und||''));
-      r._m=norm(r.mun);
-      r._n=norm([r.id,r.proc,r.num,(r.num&&r.ano?r.num+'/'+r.ano:'')].join(' '));
-      r._pt=portalDe(r);
-      r._dp=r.dp||'Não informado';
-      add(fac.esf,r.esf||'?',ESF[r.esf]||'Não informada');
-      add(fac.pod,r.pod||'?',POD[r.pod]||'Não informado');
-      add(fac.mod,String(r.mi||'?'),r.mn||'Outra');
-      add(fac.dp,r._dp,r._dp);
-      add(fac.pt,r._pt,r._pt);
+    return new Promise(function(res,rej){
+      var fac={esf:Object.create(null),pod:Object.create(null),mod:Object.create(null),dp:Object.create(null),pt:Object.create(null)};
+      var add=function(o,k,l){if(!k)return;var x=o[k]||(o[k]={l:l,n:0});x.n++};
+      var i=0,N=DATA.length;
+      function lote(){
+        try{
+          var fim=Math.min(i+3000,N);
+          for(;i<fim;i++){
+            var r=DATA[i];
+            r._h=norm([r.obj,r.org,r.und,r.mun].join(' '));
+            r._o=norm((r.org||'')+' '+(r.und||''));
+            r._m=norm(r.mun);
+            r._n=norm([r.id,r.proc,r.num,(r.num&&r.ano?r.num+'/'+r.ano:'')].join(' '));
+            r._pt=portalDe(r);
+            r._dp=r.dp||'Não informado';
+            add(fac.esf,r.esf||'?',r.esf);
+            add(fac.pod,r.pod||'?',r.pod);
+            add(fac.mod,String(r.mi||'?'),r.mn||'Outra');
+            add(fac.dp,r._dp,r._dp);
+            add(fac.pt,r._pt,r._pt);
+          }
+          if(i<N){fase('Organizando… '+Math.round(100*i/N)+'%');setTimeout(lote,0)}
+          else{FAC=fac;montarFacetas();PRONTO=true;$('#status').hidden=true;aplicar();res()}
+        }catch(e){rej(e)}
+      }
+      lote();
     });
-    montar('#f-esf','esf',fac.esf,true);montar('#f-pod','pod',fac.pod,true);montar('#f-mod','mod',fac.mod,true);
-    montar('#f-dp','dp',fac.dp,false);montar('#f-pt','pt',fac.pt,false);
-    var sem=fac.pt[SEM]?fac.pt[SEM].n:0;
-    $('#ptnota').textContent=sem?Math.round(100*sem/DATA.length)+'% das licitações não informam o portal de origem no PNCP.':'';
-    $('#ufs').innerHTML=UFS.map(function(u){return '<button data-uf="'+u+'" aria-pressed="false">'+u+'</button>'}).join('');
-    $('#regioes').innerHTML=Object.keys(REG).map(function(k){return '<button class="btn" data-reg="'+k+'">'+REGN[k]+'</button>'}).join('');
-    $('#status').hidden=true;
-    aplicar();
-  }
-  function montar(sel,key,obj,porChave){
-    var ks=Object.keys(obj).sort(function(a,b){return obj[b].n-obj[a].n});
-    $(sel).innerHTML=ks.map(function(k){
-      var v=porChave?k:obj[k].l;
-      return '<div class="chk"><label><input type="checkbox" data-k="'+key+'" data-v="'+esc(v)+'"><span class="t">'+esc(obj[k].l)+'</span></label><span class="n">'+obj[k].n.toLocaleString('pt-BR')+'</span></div>';
-    }).join('');
   }
 
   /* ---------- filtro ---------- */
@@ -295,62 +348,5 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
     return String(s||'').split(';').map(function(t){return norm(t).trim().split(/\s+/).filter(Boolean)}).filter(function(w){return w.length});
   }
   function aplicar(){
-    var inc=termos(F.q),exc=termos(F.ex),num=norm(F.num).trim(),mun=norm(F.mun).trim(),org=norm(F.org).trim();
-    TERMS=inc.reduce(function(a,w){return a.concat(w)},[]);
-    var vmin=F.vmin===''?null:Number(F.vmin),vmax=F.vmax===''?null:Number(F.vmax);
-    RES=DATA.filter(function(r){
-      if(F.uf.size&&!F.uf.has(r.uf))return false;
-      if(F.esf.size&&!F.esf.has(r.esf||'?'))return false;
-      if(F.pod.size&&!F.pod.has(r.pod||'?'))return false;
-      if(F.mod.size&&!F.mod.has(String(r.mi||'?')))return false;
-      if(F.dp.size&&!F.dp.has(r._dp))return false;
-      if(F.pt.size&&!F.pt.has(r._pt))return false;
-      if(mun&&r._m.indexOf(mun)<0)return false;
-      if(org&&r._o.indexOf(org)<0)return false;
-      if(num&&r._n.indexOf(num)<0)return false;
-      if(F.srp==='s'&&!r.srp)return false;
-      if(F.srp==='n'&&r.srp)return false;
-      if(vmin!==null||vmax!==null){
-        if(r.vl==null||r.vl===0){if(!F.vsem)return false}
-        else{if(vmin!==null&&r.vl<vmin)return false;if(vmax!==null&&r.vl>vmax)return false}
-      }else if(!F.vsem&&(r.vl==null||r.vl===0))return false;
-      if(F.d1||F.d2){var d=(r[F.pf]||'').slice(0,10);if(!d)return false;if(F.d1&&d<F.d1)return false;if(F.d2&&d>F.d2)return false}
-      if(inc.length&&!inc.some(function(ws){return ws.every(function(w){return r._h.indexOf(w)>-1})}))return false;
-      if(exc.length&&exc.some(function(ws){return ws.every(function(w){return r._h.indexOf(w)>-1})}))return false;
-      return true;
-    });
-    var o=F.ord;
-    RES.sort(function(a,b){
-      if(o==='pub')return (b.pub||'').localeCompare(a.pub||'');
-      if(o==='vd')return (b.vl||0)-(a.vl||0);
-      if(o==='va')return (a.vl==null?Infinity:a.vl)-(b.vl==null?Infinity:b.vl);
-      return (a.enc||'9').localeCompare(b.enc||'9');
-    });
-    SHOW=50;
-    desenhar();
-  }
-
-  /* ---------- exibição ---------- */
-  function data(s){if(!s)return '—';var m=/^(\d{4})-(\d\d)-(\d\d)(?:T(\d\d):(\d\d))?/.exec(s);return m?m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' '+m[4]+':'+m[5]:''):esc(s)}
-  function brl(v){return v==null?'Não informado':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
-  function dias(s){if(!s)return null;var d=new Date(s);if(isNaN(d))return null;return Math.ceil((d-new Date())/864e5)}
-  function destacar(txt){
-    var t=String(txt||'').normalize('NFC'),safe=esc(t);
-    if(!TERMS.length)return safe;
-    var n=t.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-    if(n.length!==t.length)return safe;
-    var rg=[];
-    TERMS.forEach(function(w){var i=0;while((i=n.indexOf(w,i))>-1){rg.push([i,i+w.length]);i+=w.length}});
-    if(!rg.length)return safe;
-    rg.sort(function(a,b){return a[0]-b[0]});
-    var m=[rg[0]];
-    for(var k=1;k<rg.length;k++){var l=m[m.length-1];if(rg[k][0]<=l[1])l[1]=Math.max(l[1],rg[k][1]);else m.push(rg[k])}
-    var out='',p=0;
-    m.forEach(function(x){out+=esc(t.slice(p,x[0]))+'<mark>'+esc(t.slice(x[0],x[1]))+'</mark>';p=x[1]});
-    return out+esc(t.slice(p));
-  }
-  function seguro(u){return /^https?:\/\//i.test(u||'')?u:null}
-  function card(r){
-    var dd=dias(r.enc),prazo='';
-    if(dd!==null){prazo=dd<0?'<span class="tag gray">encerrada</span>':dd<=3?'<span class="tag warn">'+(dd<=0?'encerra hoje':'faltam '+dd+(dd===1?' dia':' dias'))+'</span>':'<span class="tag gray">faltam '+dd+' dias</span>'}
-    var lnk=seguro(r.lnk),pn=(r.cnpj&&r.ano&&r.seq)?'https://pncp.gov.br/app/editais/'+encodeURIComponent(r.cnpj)+'/'+encodeURIC
+    if(!PRONTO)return;
+    var inc=termos(F.q),exc=termos(F.ex),num=norm(F.num).trim(),mun=norm(F.mun).trim(),org=norm
