@@ -25,6 +25,7 @@ SAIDA = os.environ.get("OUT", "saida")
 PAUSA = float(os.environ.get("PAUSA", "6"))  # intervalo mínimo entre chamadas, somando todos os trabalhadores (~10 por minuto; limite visto: ~12)
 TRABALHADORES = int(os.environ.get("TRABALHADORES", "3"))  # chamadas simultâneas (cada uma leva ~10s no PNCP)
 ESPERA_ERRO = float(os.environ.get("ESPERA_ERRO", "30"))
+MAX_FALHAS = int(os.environ.get("MAX_FALHAS", "5"))  # páginas parcialmente perdidas que ainda aceitamos
 MAX_PAGINAS = int(os.environ.get("MAX_PAGINAS", "0"))  # 0 = todas (só para testes usar outro valor)
 MODALIDADES = range(1, 14)
 HEADERS = {"User-Agent": "Mozilla/5.0 (buscador de licitacoes)", "Accept": "application/json"}
@@ -68,7 +69,8 @@ def chamar(path, params, tentativas=6):
                 return r.status, json.loads(corpo)
         except urllib.error.HTTPError as e:
             ultimo = f"HTTP {e.code}"
-            if e.code in (429, 500, 502, 503, 504) and i < tentativas - 1:
+            limite = tentativas if e.code == 429 else min(tentativas, 3)
+            if e.code in (429, 500, 502, 503, 504) and i < limite - 1:
                 log(f"  {ultimo}; nova tentativa em {int(ESPERA_ERRO * (i + 1))}s")
                 segurar_todos(ESPERA_ERRO * (i + 1))
                 continue
@@ -147,6 +149,24 @@ def main():
                 nome = e.get("mn") or str(m)
                 por_modalidade[nome] = por_modalidade.get(nome, 0) + 1
 
+    sem_dados = []
+
+    def recuperar(m, pagina):
+        """Uma página de 50 falhou: busca o mesmo trecho em 5 páginas de 10 para salvar o que for possível."""
+        dados, falhas = [], 0
+        for k in range(5):
+            st, c = chamar(
+                "/contratacoes/proposta",
+                {"dataFinal": data_final, "codigoModalidadeContratacao": m,
+                 "pagina": (pagina - 1) * 5 + 1 + k, "tamanhoPagina": 10},
+                tentativas=2,
+            )
+            if st == 200 and isinstance(c, dict):
+                dados += c.get("data") or []
+            elif st != 204:
+                falhas += 1
+        return dados, falhas
+
     for m in MODALIDADES:
         _, st, corpo = pegar(m, 1)
         if st == 204:
@@ -168,7 +188,13 @@ def main():
                     if st == 204:
                         continue
                     if st != 200 or not isinstance(corpo, dict):
-                        erros.append(f"modalidade {m} pagina {pagina}: {st} {str(corpo)[:100]}")
+                        dados, falhas = recuperar(m, pagina)
+                        absorver(m, {"data": dados})
+                        if falhas:
+                            sem_dados.append(f"modalidade {m} pagina {pagina}: {st} ({falhas} de 5 trechos perdidos)")
+                        log(f"  pagina {pagina} da modalidade {m} deu erro {st}; recuperados {len(dados)} registros")
+                        if len(sem_dados) > MAX_FALHAS:
+                            erros.append(f"muitas paginas com falha (ultima: modalidade {m} pagina {pagina}: {st})")
                         continue
                     absorver(m, corpo)
                 feitas += len(grupo)
@@ -212,6 +238,7 @@ def main():
         "duracaoSegundos": int(time.time() - inicio),
         "porModalidade": por_modalidade,
         "semLink": sum(1 for x in lista if not x.get("lnk")),
+        "paginasComFalha": sem_dados,
         "topUsuarios": usuarios.most_common(80),
         "topDominios": dominios.most_common(80),
     }
