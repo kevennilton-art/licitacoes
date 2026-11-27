@@ -31,7 +31,7 @@ def log(msg):
     print(msg, flush=True)
 
 
-def chamar(path, params, tentativas=5):
+def chamar(path, params, tentativas=6):
     url = f"{BASE}{path}?{urllib.parse.urlencode(params)}"
     ultimo = "sem resposta"
     for i in range(tentativas):
@@ -51,7 +51,8 @@ def chamar(path, params, tentativas=5):
         except Exception as e:  # rede, JSON inválido
             ultimo = repr(e)[:120]
             if i < tentativas - 1:
-                time.sleep(min(10, ESPERA_ERRO))
+                log(f"  falha de rede ({ultimo}); nova tentativa em {int(ESPERA_ERRO * (i + 1))}s")
+                time.sleep(ESPERA_ERRO * (i + 1))
                 continue
     return 0, ultimo
 
@@ -130,6 +131,8 @@ def main():
             if pagina % 25 == 0 or pagina == total_pag:
                 log(f"modalidade {m}: pagina {pagina}/{total_pag} | total acumulado {len(itens)} | {int(time.time() - inicio)}s")
             pagina += 1
+        if erros:
+            break  # o PNCP está fora do ar ou recusando: para logo, sem gastar tempo nas demais modalidades
 
     if erros:
         log("ERROS NA COLETA (nada foi gravado):")
