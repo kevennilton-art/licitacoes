@@ -26,6 +26,9 @@ PAUSA = float(os.environ.get("PAUSA", "6"))  # intervalo mínimo entre chamadas,
 TRABALHADORES = int(os.environ.get("TRABALHADORES", "3"))  # chamadas simultâneas (cada uma leva ~10s no PNCP)
 ESPERA_ERRO = float(os.environ.get("ESPERA_ERRO", "30"))
 MAX_FALHAS = int(os.environ.get("MAX_FALHAS", "5"))  # páginas parcialmente perdidas que ainda aceitamos
+ESPERA_RODADA = float(os.environ.get("ESPERA_RODADA", "180"))  # pausa antes de tentar de novo uma modalidade que falhou
+ANTERIORES = os.environ.get("ANTERIORES_URL") or "https://raw.githubusercontent.com/{}/dados/licitacoes.json.gz".format(os.environ.get("GITHUB_REPOSITORY", "kevennilton-art/licitacoes"))
+MAX_MODALIDADES_DESATUALIZADAS = int(os.environ.get("MAX_DESATUALIZADAS", "4"))
 MAX_PAGINAS = int(os.environ.get("MAX_PAGINAS", "0"))  # 0 = todas (só para testes usar outro valor)
 MODALIDADES = range(1, 14)
 HEADERS = {"User-Agent": "Mozilla/5.0 (buscador de licitacoes)", "Accept": "application/json"}
@@ -167,19 +170,20 @@ def main():
                 falhas += 1
         return dados, falhas
 
-    for m in MODALIDADES:
+    def coletar_modalidade(m):
+        """Devolve None se deu certo, ou o motivo da falha. O que já foi baixado fica guardado."""
         _, st, corpo = pegar(m, 1)
         if st == 204:
-            continue
+            return None
         if st != 200 or not isinstance(corpo, dict):
-            erros.append(f"modalidade {m} pagina 1: {st} {str(corpo)[:100]}")
-            break
+            return f"pagina 1: {st} {str(corpo)[:60]}"
         total_pag = int(corpo.get("totalPaginas") or 1)
         if MAX_PAGINAS:
             total_pag = min(total_pag, MAX_PAGINAS)
         absorver(m, corpo)
         paginas = list(range(2, total_pag + 1))
         feitas = 1
+        perdidas = []
         lote = max(1, TRABALHADORES * 4)
         with ThreadPoolExecutor(max_workers=TRABALHADORES) as ex:
             for i in range(0, len(paginas), lote):
@@ -191,19 +195,64 @@ def main():
                         dados, falhas = recuperar(m, pagina)
                         absorver(m, {"data": dados})
                         if falhas:
-                            sem_dados.append(f"modalidade {m} pagina {pagina}: {st} ({falhas} de 5 trechos perdidos)")
+                            perdidas.append(f"modalidade {m} pagina {pagina}: {st} ({falhas} de 5 trechos perdidos)")
                         log(f"  pagina {pagina} da modalidade {m} deu erro {st}; recuperados {len(dados)} registros")
-                        if len(sem_dados) > MAX_FALHAS:
-                            erros.append(f"muitas paginas com falha (ultima: modalidade {m} pagina {pagina}: {st})")
-                        continue
-                    absorver(m, corpo)
                 feitas += len(grupo)
-                if erros:
-                    break  # o PNCP está fora do ar ou recusando: para logo
+                if len(perdidas) > MAX_FALHAS:
+                    return f"muitas paginas com falha ({len(perdidas)})"
                 if feitas % 24 < lote or feitas >= total_pag:
                     log(f"modalidade {m}: pagina {min(feitas, total_pag)}/{total_pag} | total acumulado {len(itens)} | {int(time.time() - inicio)}s")
-        if erros:
+        sem_dados.extend(perdidas)
+        return None
+
+    # 1a rodada: se as 3 primeiras que falharem forem seguidas, o PNCP está fora do ar: para logo
+    pendentes = []
+    for m in MODALIDADES:
+        motivo = coletar_modalidade(m)
+        if motivo:
+            log(f"modalidade {m} falhou: {motivo}")
+            pendentes.append((m, motivo))
+            if len(pendentes) >= 3:
+                erros.append("o PNCP parece fora do ar (3 modalidades falharam)")
+                break
+
+    # rodadas extras: espera e tenta de novo só as que falharam
+    for rodada in range(2):
+        if not pendentes or erros:
             break
+        log(f"Aguardando {int(ESPERA_RODADA)}s para tentar de novo as modalidades {[m for m, _ in pendentes]}")
+        time.sleep(ESPERA_RODADA)
+        novas = []
+        for m, _ in pendentes:
+            motivo = coletar_modalidade(m)
+            if motivo:
+                log(f"modalidade {m} falhou de novo: {motivo}")
+                novas.append((m, motivo))
+        pendentes = novas
+
+    # as que continuam falhando: mantém os registros da coleta anterior (ainda não encerrados)
+    desatualizadas = []
+    if pendentes and not erros:
+        if len(pendentes) > MAX_MODALIDADES_DESATUALIZADAS:
+            erros.append(f"{len(pendentes)} modalidades falharam")
+        else:
+            try:
+                req = urllib.request.Request(ANTERIORES, headers=HEADERS)
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    anteriores = json.loads(gzip.decompress(r.read()))
+            except Exception as e:
+                anteriores = None
+                erros.append(f"modalidades {[m for m, _ in pendentes]} falharam e nao foi possivel ler a coleta anterior ({repr(e)[:80]})")
+            if anteriores is not None:
+                agora_br = (datetime.now(timezone.utc) - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%S")
+                for m, motivo in pendentes:
+                    mantidos = 0
+                    for x in anteriores:
+                        if x.get("mi") == m and x.get("id") and (x.get("enc") or "9") >= agora_br and x["id"] not in itens:
+                            itens[x["id"]] = x
+                            mantidos += 1
+                    desatualizadas.append({"modalidade": m, "motivo": motivo, "registrosMantidos": mantidos})
+                    log(f"modalidade {m}: mantidos {mantidos} registros da coleta anterior ({motivo})")
 
     if erros:
         log("ERROS NA COLETA (nada foi gravado):")
@@ -239,6 +288,7 @@ def main():
         "porModalidade": por_modalidade,
         "semLink": sum(1 for x in lista if not x.get("lnk")),
         "paginasComFalha": sem_dados,
+        "modalidadesDesatualizadas": desatualizadas,
         "topUsuarios": usuarios.most_common(80),
         "topDominios": dominios.most_common(80),
     }
