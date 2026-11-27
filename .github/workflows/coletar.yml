@@ -17,7 +17,7 @@ concurrency:
 jobs:
   coletar:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 330
     steps:
       - name: Baixar o repositório
         uses: actions/checkout@v4
