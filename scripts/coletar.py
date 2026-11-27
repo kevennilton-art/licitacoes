@@ -14,13 +14,16 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 BASE = os.environ.get("PNCP_BASE", "https://pncp.gov.br/api/consulta/v1")
 SAIDA = os.environ.get("OUT", "saida")
-PAUSA = float(os.environ.get("PAUSA", "6.5"))  # ~9 chamadas por minuto (limite visto: ~12)
+PAUSA = float(os.environ.get("PAUSA", "6"))  # intervalo mínimo entre chamadas, somando todos os trabalhadores (~10 por minuto; limite visto: ~12)
+TRABALHADORES = int(os.environ.get("TRABALHADORES", "3"))  # chamadas simultâneas (cada uma leva ~10s no PNCP)
 ESPERA_ERRO = float(os.environ.get("ESPERA_ERRO", "30"))
 MAX_PAGINAS = int(os.environ.get("MAX_PAGINAS", "0"))  # 0 = todas (só para testes usar outro valor)
 MODALIDADES = range(1, 14)
@@ -31,13 +34,34 @@ def log(msg):
     print(msg, flush=True)
 
 
+_trava = threading.Lock()
+_proxima = [0.0]
+
+
+def esperar_vez():
+    """Garante um intervalo mínimo entre as chamadas de todos os trabalhadores."""
+    with _trava:
+        quando = max(time.time(), _proxima[0])
+        _proxima[0] = quando + PAUSA
+    espera = quando - time.time()
+    if espera > 0:
+        time.sleep(espera)
+
+
+def segurar_todos(segundos):
+    """Em caso de erro, todos os trabalhadores esperam."""
+    with _trava:
+        _proxima[0] = max(_proxima[0], time.time() + segundos)
+
+
 def chamar(path, params, tentativas=6):
     url = f"{BASE}{path}?{urllib.parse.urlencode(params)}"
     ultimo = "sem resposta"
     for i in range(tentativas):
+        esperar_vez()
         try:
             req = urllib.request.Request(url, headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=90) as r:
                 corpo = r.read()
                 if r.status == 204 or not corpo:
                     return 204, None
@@ -45,14 +69,15 @@ def chamar(path, params, tentativas=6):
         except urllib.error.HTTPError as e:
             ultimo = f"HTTP {e.code}"
             if e.code in (429, 500, 502, 503, 504) and i < tentativas - 1:
-                time.sleep(ESPERA_ERRO * (i + 1))
+                log(f"  {ultimo}; nova tentativa em {int(ESPERA_ERRO * (i + 1))}s")
+                segurar_todos(ESPERA_ERRO * (i + 1))
                 continue
             return e.code, ultimo
         except Exception as e:  # rede, JSON inválido
             ultimo = repr(e)[:120]
             if i < tentativas - 1:
                 log(f"  falha de rede ({ultimo}); nova tentativa em {int(ESPERA_ERRO * (i + 1))}s")
-                time.sleep(ESPERA_ERRO * (i + 1))
+                segurar_todos(ESPERA_ERRO * (i + 1))
                 continue
     return 0, ultimo
 
@@ -107,32 +132,52 @@ def main():
     por_modalidade = {}
     erros = []
 
+    def pegar(m, pagina):
+        st, corpo = chamar(
+            "/contratacoes/proposta",
+            {"dataFinal": data_final, "codigoModalidadeContratacao": m, "pagina": pagina, "tamanhoPagina": 50},
+        )
+        return pagina, st, corpo
+
+    def absorver(m, corpo):
+        for r in corpo.get("data") or []:
+            e = enxuto(r)
+            if e.get("id"):
+                itens[e["id"]] = e
+                nome = e.get("mn") or str(m)
+                por_modalidade[nome] = por_modalidade.get(nome, 0) + 1
+
     for m in MODALIDADES:
-        pagina, total_pag = 1, 1
-        while pagina <= total_pag:
-            if MAX_PAGINAS and pagina > MAX_PAGINAS:
-                break
-            st, corpo = chamar(
-                "/contratacoes/proposta",
-                {"dataFinal": data_final, "codigoModalidadeContratacao": m, "pagina": pagina, "tamanhoPagina": 50},
-            )
-            time.sleep(PAUSA)
-            if st == 204:
-                break
-            if st != 200 or not isinstance(corpo, dict):
-                erros.append(f"modalidade {m} pagina {pagina}: {st} {str(corpo)[:100]}")
-                break
-            total_pag = int(corpo.get("totalPaginas") or 1)
-            for r in corpo.get("data") or []:
-                e = enxuto(r)
-                if e.get("id"):
-                    itens[e["id"]] = e
-                    por_modalidade[e.get("mn") or str(m)] = por_modalidade.get(e.get("mn") or str(m), 0) + 1
-            if pagina % 25 == 0 or pagina == total_pag:
-                log(f"modalidade {m}: pagina {pagina}/{total_pag} | total acumulado {len(itens)} | {int(time.time() - inicio)}s")
-            pagina += 1
+        _, st, corpo = pegar(m, 1)
+        if st == 204:
+            continue
+        if st != 200 or not isinstance(corpo, dict):
+            erros.append(f"modalidade {m} pagina 1: {st} {str(corpo)[:100]}")
+            break
+        total_pag = int(corpo.get("totalPaginas") or 1)
+        if MAX_PAGINAS:
+            total_pag = min(total_pag, MAX_PAGINAS)
+        absorver(m, corpo)
+        paginas = list(range(2, total_pag + 1))
+        feitas = 1
+        lote = max(1, TRABALHADORES * 4)
+        with ThreadPoolExecutor(max_workers=TRABALHADORES) as ex:
+            for i in range(0, len(paginas), lote):
+                grupo = paginas[i:i + lote]
+                for pagina, st, corpo in ex.map(lambda p: pegar(m, p), grupo):
+                    if st == 204:
+                        continue
+                    if st != 200 or not isinstance(corpo, dict):
+                        erros.append(f"modalidade {m} pagina {pagina}: {st} {str(corpo)[:100]}")
+                        continue
+                    absorver(m, corpo)
+                feitas += len(grupo)
+                if erros:
+                    break  # o PNCP está fora do ar ou recusando: para logo
+                if feitas % 24 < lote or feitas >= total_pag:
+                    log(f"modalidade {m}: pagina {min(feitas, total_pag)}/{total_pag} | total acumulado {len(itens)} | {int(time.time() - inicio)}s")
         if erros:
-            break  # o PNCP está fora do ar ou recusando: para logo, sem gastar tempo nas demais modalidades
+            break
 
     if erros:
         log("ERROS NA COLETA (nada foi gravado):")
