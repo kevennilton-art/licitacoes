@@ -1,0 +1,664 @@
+{
+ "geradoEm": "2026-11-28T13:42:53Z",
+ "geradoEmBrasilia": "28/11/2026 10:42",
+ "total": 573,
+ "tamanhoJsonBytes": 456889,
+ "duracaoSegundos": 6259,
+ "porModalidade": {
+  "Leilão - Eletrônico": 50,
+  "Concurso": 15,
+  "Concorrência - Eletrônica": 50,
+  "Concorrência - Presencial": 50,
+  "Pregão - Eletrônico": 90,
+  "Pregão - Presencial": 50,
+  "Dispensa": 80,
+  "Inexigibilidade": 29,
+  "Manifestação de Interesse": 15,
+  "Pré-qualificação": 50,
+  "Credenciamento": 50,
+  "Leilão - Presencial": 44
+ },
+ "semLink": 321,
+ "paginasComFalha": [
+  "modalidade 6 pagina 2: 500 (1 de 5 trechos perdidos)",
+  "modalidade 8 pagina 2: 500 (5 de 5 trechos perdidos)",
+  "modalidade 8 pagina 4: 500 (2 de 5 trechos perdidos)"
+ ],
+ "modalidadesDesatualizadas": [],
+ "topUsuarios": [
+  [
+   "Compras.gov.br",
+   87
+  ],
+  [
+   "Licitar Digital - Plataforma de Licitações Online",
+   35
+  ],
+  [
+   "Elotech Gestão Pública Ltda",
+   34
+  ],
+  [
+   "IPM Sistemas",
+   28
+  ],
+  [
+   "UMUPP",
+   25
+  ],
+  [
+   "Secretaria do Planejamento e Gestão do Ceará",
+   21
+  ],
+  [
+   "Governançabrasil Tecnologia e Gestão em Serviços",
+   18
+  ],
+  [
+   "ECustomize Consultoria em Software S.A",
+   18
+  ],
+  [
+   "Fiorilli Software",
+   15
+  ],
+  [
+   "Betha Sistemas",
+   15
+  ],
+  [
+   "CENTI",
+   14
+  ],
+  [
+   "BAHIA SECRETARIA DA ADMINISTRACAO",
+   14
+  ],
+  [
+   "Prodata Informática",
+   13
+  ],
+  [
+   "Inovea Tecnologia Ltda",
+   12
+  ],
+  [
+   "E & L PRODUCOES DE SOFTWARE LTDA",
+   11
+  ],
+  [
+   "Licitanet Licitações Eletrônicas LTDA",
+   10
+  ],
+  [
+   "Sigep - Sistemas Integrados",
+   10
+  ],
+  [
+   "Megasoft Informática",
+   9
+  ],
+  [
+   "Licita + Brasil",
+   9
+  ],
+  [
+   "Planejar Consultores Associados Ltda",
+   8
+  ],
+  [
+   "Equiplano Sistemas LTDA / Equiplano Sistemas",
+   7
+  ],
+  [
+   "BLL Compras",
+   7
+  ],
+  [
+   "Contratosgov Sistemas",
+   7
+  ],
+  [
+   "Centro Eletrônico Bancário Industrial LTDA",
+   6
+  ],
+  [
+   "Compras Pará",
+   6
+  ],
+  [
+   "Bolsa Nacional De Compras - BNC",
+   5
+  ],
+  [
+   "LicitaCon - TCE-RS",
+   5
+  ],
+  [
+   "CONAM Consultoria em Administração Municipal",
+   5
+  ],
+  [
+   "AZ INFORMATICA LTDA",
+   5
+  ],
+  [
+   "SH3 Informática Ltda.",
+   5
+  ],
+  [
+   "PUBLICOM PUBLICIDADE LEGAL E PRODUÇÃO DE EVENTOS LTDA",
+   5
+  ],
+  [
+   "Novo BBMNET Licitações",
+   5
+  ],
+  [
+   "Portal de Compras do Estado de Minas Gerais",
+   4
+  ],
+  [
+   "SMARAPD INFORMATICA LTDA",
+   4
+  ],
+  [
+   "TOP DOWN CONSULTORIA LTDA",
+   4
+  ],
+  [
+   "Santa Catarina Tribunal de Justiça/Tribunal de Justiça do Estado de Santa Catarina",
+   4
+  ],
+  [
+   "Agili Software Brasil Ltda",
+   4
+  ],
+  [
+   "BR Conectado",
+   4
+  ],
+  [
+   "digifred sistemas de informação ltda",
+   3
+  ],
+  [
+   "JL Alves Gestão",
+   3
+  ],
+  [
+   "Instituto Municipal de Administração Pública - IMAP",
+   3
+  ],
+  [
+   "ASSESI BRASIL",
+   3
+  ],
+  [
+   "PREFEITURA MUNICIPAL DE BARUERI / PREFEITURA DE BARUERI",
+   3
+  ],
+  [
+   "EMBRAS - EMPRESA BRASILEIRA DE TECNOLOGIA LTDA",
+   3
+  ],
+  [
+   "MUNICIPIO DE TAQUARA",
+   3
+  ],
+  [
+   "J J S SILVA -  MULTIPUBLIK",
+   2
+  ],
+  [
+   "Tecnosweb - Tecnologia de Gestão",
+   2
+  ],
+  [
+   "Portal de Compras Públicas do Estado do Rio de Janeiro",
+   2
+  ],
+  [
+   "Memory Projetos e Desenvolvimento de Sistemas LTDA",
+   2
+  ],
+  [
+   "PROCERGS - CENTRO DE TECNOLOGIA DA INFORMACAO E COMUNICACAO DO ESTADO DO RIO GRANDE DO SUL S.A.",
+   2
+  ],
+  [
+   "Coplan - Consultoria E Planejamento Eireli",
+   2
+  ],
+  [
+   "Central de Compras da Paraíba/PB",
+   2
+  ],
+  [
+   "Informática de Municípios Associados S/A – IMA",
+   2
+  ],
+  [
+   "MUNICÍPIO DE NÃO-ME-TOQUE",
+   2
+  ],
+  [
+   "STARTGOV SOLUCOES EM TECNOLOGIA LTDA",
+   2
+  ],
+  [
+   "CDZ Tecnologia da Informação LTDA",
+   2
+  ],
+  [
+   "ATENA PREPARADORA DE LEILÕES E GESTÃO DE PÁTIOS LTDA",
+   1
+  ],
+  [
+   "J BRASIL SISTEMAS LTDA",
+   1
+  ],
+  [
+   "PUBLICENTER INFORMATICA COMERCIO E LOCACAO LTDA",
+   1
+  ],
+  [
+   "Instar Tecnologia em Informática",
+   1
+  ],
+  [
+   "Prefeitura da Cidade do Recife",
+   1
+  ],
+  [
+   "Município de São José dos Campos",
+   1
+  ],
+  [
+   "GOVERNO DO ESTADO DO ACRE",
+   1
+  ],
+  [
+   "Ministério da Fazenda / Receita Federal",
+   1
+  ],
+  [
+   "Universidade Estadual Paulista \"Julio de Mesquita Filho\" - Reitoria",
+   1
+  ],
+  [
+   "Obara Informática Ltda",
+   1
+  ],
+  [
+   "Prefeitura Municipal de Caxias do Sul",
+   1
+  ],
+  [
+   "JF PIMENTEL FILHO SISTEMAS LTDA",
+   1
+  ],
+  [
+   "LIBRE SOLUÇÕES EM TECNOLOGIA LTDA",
+   1
+  ],
+  [
+   "CONTASS SISTEMAS PUBLICOS LTDA",
+   1
+  ],
+  [
+   "NOVOSERV INFORMATICA LTDA EPP",
+   1
+  ],
+  [
+   "MUNICIPIO DE FORTALEZA - PREFEITURA MUNICIPAL DE FORTALEZA",
+   1
+  ],
+  [
+   "Pública Tecnologia Ltda.",
+   1
+  ],
+  [
+   "GOVTEC SISTEMAS DE INFORMATICA LTDA",
+   1
+  ],
+  [
+   "PREFEITURA DE MUNICIPAL DE IMBÉ",
+   1
+  ],
+  [
+   "PREFEITURA MUNICIPAL DE BLUMENAU",
+   1
+  ],
+  [
+   "Licitações-E BB",
+   1
+  ],
+  [
+   "Prefeitura Municipal do Rio Grande",
+   1
+  ],
+  [
+   "MUNICIPIO DE BÁLSAMO",
+   1
+  ],
+  [
+   "Procede Bahia Processamento e Certificação de Documentos Eletrônicos",
+   1
+  ]
+ ],
+ "topDominios": [
+  [
+   "cnetmobile.estaleiro.serpro.gov.br",
+   60
+  ],
+  [
+   "(vazio)",
+   24
+  ],
+  [
+   "app2.licitardigital.com.br",
+   22
+  ],
+  [
+   "www.portaldecompraspublicas.com.br",
+   12
+  ],
+  [
+   "licitanet.com.br",
+   10
+  ],
+  [
+   "licitamaisbrasil.com.br",
+   9
+  ],
+  [
+   "app2.ammlicita.org.br",
+   8
+  ],
+  [
+   "bllcompras.com",
+   7
+  ],
+  [
+   "bnccompras.com",
+   5
+  ],
+  [
+   "portal.tce.rs.gov.br",
+   5
+  ],
+  [
+   "gestaopublica.caturai.bsit-br.com.br",
+   5
+  ],
+  [
+   "www1.compras.mg.gov.br",
+   4
+  ],
+  [
+   "transparencia.agilicloud.com.br",
+   4
+  ],
+  [
+   "compras.barueri.sp.gov.br",
+   3
+  ],
+  [
+   "www.compras.rj.gov.br",
+   2
+  ],
+  [
+   "www.antonioprado.rs.gov.br",
+   2
+  ],
+  [
+   "www.guaraci.sp.gov.br",
+   2
+  ],
+  [
+   "sei.mi.gov.br",
+   2
+  ],
+  [
+   "portaldecompraspublicas.com.br",
+   2
+  ],
+  [
+   "compras.campogrande.ms.gov.br",
+   2
+  ],
+  [
+   "www.gp.srv.br",
+   2
+  ],
+  [
+   "campinas.sp.gov.br",
+   2
+  ],
+  [
+   "www.centraldecompras.pb.gov.br",
+   2
+  ],
+  [
+   "www.gov.br",
+   2
+  ],
+  [
+   "diario.indap.org.br",
+   1
+  ],
+  [
+   "187.17.201.73:8078",
+   1
+  ],
+  [
+   "ananas.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "palmelo.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "agiliza-interno.coren-sp.gov.br",
+   1
+  ],
+  [
+   "palestinadegoias.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "bomjardimdegoias.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "agiliza-interno-rs.coren-sp.gov.br",
+   1
+  ],
+  [
+   "sumareleiloes.com.br",
+   1
+  ],
+  [
+   "go.centi.com.br",
+   1
+  ],
+  [
+   "corregodobomjesus.mg.gov.br",
+   1
+  ],
+  [
+   "camaradesaojoaodelrei.licitapp.com.br",
+   1
+  ],
+  [
+   "jussara.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "www.portalcr2.com.br",
+   1
+  ],
+  [
+   "app2-compras.riopretoprev.sp.gov.br",
+   1
+  ],
+  [
+   "www.itabera.sp.gov.br",
+   1
+  ],
+  [
+   "portaldecompras.recife.pe.gov.br",
+   1
+  ],
+  [
+   "servicos.sjc.sp.gov.br",
+   1
+  ],
+  [
+   "sei.caubr.gov.br",
+   1
+  ],
+  [
+   "www.cl.df.gov.br",
+   1
+  ],
+  [
+   "www.teresopolis.rj.gov.br",
+   1
+  ],
+  [
+   "sei.turismo.gov.br",
+   1
+  ],
+  [
+   "www.banestes.com.br",
+   1
+  ],
+  [
+   "licitacoes.lages.sc.gov.br",
+   1
+  ],
+  [
+   "sei.mds.gov.br",
+   1
+  ],
+  [
+   "davinopolis.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "www.ibitinga.sp.gov.br",
+   1
+  ],
+  [
+   "www.compras.rs.gov.br",
+   1
+  ],
+  [
+   "www.licitaconisud.com.br",
+   1
+  ],
+  [
+   "www.setelagoas.mg.gov.br",
+   1
+  ],
+  [
+   "pregaobanrisul.com.br",
+   1
+  ],
+  [
+   "transparencia.cosmopolis.sp.gov.br",
+   1
+  ],
+  [
+   "pncp.gov.br",
+   1
+  ],
+  [
+   "compras.sepog.fortaleza.ce.gov.br",
+   1
+  ],
+  [
+   "portal.guararema.sp.gov.br",
+   1
+  ],
+  [
+   "www.angra.rj.gov.br",
+   1
+  ],
+  [
+   "transparencia.portoesperidiao.mt.gov.br",
+   1
+  ],
+  [
+   "morroagudodegoias.megasofttransparencia.com.br",
+   1
+  ],
+  [
+   "www.sandroleiloeiro.com.br",
+   1
+  ],
+  [
+   "sei.saude.gov.br",
+   1
+  ],
+  [
+   "saocarlossaae.eportal.net.br",
+   1
+  ],
+  [
+   "licitacoes-e2.bb.com.br",
+   1
+  ],
+  [
+   "www.catanduva.sp.gov.br",
+   1
+  ],
+  [
+   "177.39.199.170:8079",
+   1
+  ],
+  [
+   "sei.pi.gov.br",
+   1
+  ],
+  [
+   "sei.prefeitura.sp.gov.br",
+   1
+  ],
+  [
+   "saojoaodelrei.licitapp.com.br",
+   1
+  ],
+  [
+   "documentos.cff.org.br",
+   1
+  ],
+  [
+   "sti.imperatriz.ma.gov.br",
+   1
+  ],
+  [
+   "gestaopublica.indiara.bsit-br.com.br",
+   1
+  ],
+  [
+   "www.portaldecomprasapicumacu.com.br",
+   1
+  ],
+  [
+   "condergdivinolandia.geosiap.net.br",
+   1
+  ],
+  [
+   "www.comprasjoselandiama.com.br",
+   1
+  ],
+  [
+   "www.comprassaojoaodospatosma.com.br",
+   1
+  ]
+ ]
+}
